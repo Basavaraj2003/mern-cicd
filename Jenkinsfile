@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     tools {
-        nodejs 'Node.js 18.x'  // Make sure this matches your Jenkins NodeJS installation name
+        nodejs 'Node18'  // Changed to match Jenkins' configured NodeJS installation name
     }
 
     environment {
@@ -19,7 +19,7 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 dir('client') {
-                    sh 'npm install'  // Using sh since Jenkins container is Linux-based
+                    sh 'npm install'
                 }
                 dir('server') {
                     sh 'npm install'
