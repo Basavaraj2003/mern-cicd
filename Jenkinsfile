@@ -30,8 +30,10 @@ pipeline {
         stage('Lint & Build Frontend') {
             steps {
                 dir('client') {
-                    sh 'npm run lint || true'   // Optional: prevent fail, better to fix root cause
-                    sh 'npm run build'
+                    withEnv(["PATH+NODE=${env.WORKSPACE}/client/node_modules/.bin"]) {
+                        sh 'npm run lint || true' // Avoid failure for now
+                        sh 'npm run build'
+                    }
                 }
             }
         }
@@ -39,7 +41,9 @@ pipeline {
         stage('Lint Backend') {
             steps {
                 dir('server') {
-                    sh 'npm run lint'
+                    withEnv(["PATH+NODE=${env.WORKSPACE}/server/node_modules/.bin"]) {
+                        sh 'npm run lint'
+                    }
                 }
             }
         }
