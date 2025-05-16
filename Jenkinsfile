@@ -1,9 +1,5 @@
 pipeline {
-    agent {
-        docker {
-            image 'node:20' // Use any Node.js version you need
-        }
-    }
+    agent any
 
     environment {
         NODE_ENV = 'production'
@@ -15,30 +11,38 @@ pipeline {
                 checkout scm
             }
         }
+        
+        stage('Setup NodeJS') {
+            steps {
+                // Use Jenkins' built-in NodeJS tool
+                tool name: 'NodeJS', type: 'nodejs'
+            }
+        }
+
         stage('Install Dependencies') {
             steps {
                 dir('client') {
-                    sh 'npm install'
+                    bat 'npm install'  // Using bat for Windows
                 }
                 dir('server') {
-                    sh 'npm install'
+                    bat 'npm install'
                 }
             }
         }
+
         stage('Lint & Build Frontend') {
             steps {
                 dir('client') {
-                    sh 'npm run lint'
-                    sh 'npm run build'
+                    bat 'npm run lint'
+                    bat 'npm run build'
                 }
             }
         }
-        stage('Lint & Test Backend') {
+
+        stage('Lint Backend') {
             steps {
                 dir('server') {
-                    sh 'npm run lint'
-                    // Uncomment the next line if you have tests
-                    // sh 'npm test'
+                    bat 'npm run lint'
                 }
             }
         }
