@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    tools {
+        nodejs 'Node.js 18.x'  // Make sure this matches your Jenkins NodeJS installation name
+    }
+
     environment {
         NODE_ENV = 'production'
     }
@@ -11,21 +15,14 @@ pipeline {
                 checkout scm
             }
         }
-        
-        stage('Setup NodeJS') {
-            steps {
-                // Use Jenkins' built-in NodeJS tool
-                tool name: 'NodeJS', type: 'nodejs'
-            }
-        }
 
         stage('Install Dependencies') {
             steps {
                 dir('client') {
-                    bat 'npm install'  // Using bat for Windows
+                    sh 'npm install'  // Using sh since Jenkins container is Linux-based
                 }
                 dir('server') {
-                    bat 'npm install'
+                    sh 'npm install'
                 }
             }
         }
@@ -33,8 +30,8 @@ pipeline {
         stage('Lint & Build Frontend') {
             steps {
                 dir('client') {
-                    bat 'npm run lint'
-                    bat 'npm run build'
+                    sh 'npm run lint'
+                    sh 'npm run build'
                 }
             }
         }
@@ -42,7 +39,7 @@ pipeline {
         stage('Lint Backend') {
             steps {
                 dir('server') {
-                    bat 'npm run lint'
+                    sh 'npm run lint'
                 }
             }
         }
