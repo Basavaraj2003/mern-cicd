@@ -1,5 +1,9 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'node:20' // Use any Node.js version you need
+        }
+    }
 
     environment {
         NODE_ENV = 'production'
@@ -38,12 +42,6 @@ pipeline {
                 }
             }
         }
-        // Optional: Add deploy or archive steps here
-        // stage('Deploy') {
-        //     steps {
-        //         echo 'Deploying...'
-        //     }
-        // }
     }
 
     post {
