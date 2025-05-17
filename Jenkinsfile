@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     tools {
-        nodejs 'Node18'  // Use the Node.js installation configured in Jenkins
+        nodejs 'Node20'
     }
 
     environment {
@@ -12,35 +12,33 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                checkout scm
+                git branch: 'main',
+                    url: 'https://github.com/Basavaraj2003/mern-cicd.git',
+                    credentialsId: '' // Leave empty if using public repo
             }
         }
 
         stage('Install Dependencies') {
             steps {
-                dir('client') {  // Change this to your frontend directory name if different
-                    sh 'npm install'
+                sh 'npm --version'
+                sh 'node --version'
+                dir('client') {
+                    sh 'npm ci'
                 }
-                dir('server') {  // Change this to your backend directory name if different
-                    sh 'npm install'
-                }
-            }
-        }
-
-        stage('Lint & Build Frontend') {
-            steps {
-                dir('client') {  // Change this to your frontend directory name if different
-                    // Use npx to ensure the binaries are found
-                    sh 'npx eslint . || true'  // The || true allows the pipeline to continue even if linting fails
-                    sh 'npx vite build'  // Using npx to ensure vite is found
+                dir('server') {
+                    sh 'npm ci'
                 }
             }
         }
 
-        stage('Lint Backend') {
+        stage('Lint & Build') {
             steps {
-                dir('server') {  // Change this to your backend directory name if different
-                    sh 'npx eslint . || true'  // The || true allows the pipeline to continue even if linting fails
+                dir('client') {
+                    sh 'npm run lint || true'
+                    sh 'npm run build'
+                }
+                dir('server') {
+                    sh 'npm run lint || true'
                 }
             }
         }
@@ -48,35 +46,30 @@ pipeline {
         stage('Test') {
             steps {
                 dir('client') {
-                    sh 'npx vitest run || true'  // Adjust based on your testing framework
+                    sh 'npm test || true'
                 }
                 dir('server') {
-                    sh 'npm test || true'  // Adjust based on your testing framework
+                    sh 'npm test || true'
                 }
             }
         }
 
         stage('Deploy') {
-            when {
-                branch 'main'  // Only deploy from the main branch
-            }
             steps {
                 echo 'Deploying application...'
-                // Add your deployment steps here
             }
         }
     }
 
     post {
-        always {
-            echo 'Pipeline finished.'
-            // Clean up steps if needed
-        }
         success {
             echo 'Pipeline succeeded!'
         }
         failure {
-            echo 'Pipeline failed.'
+            echo 'Pipeline failed!'
+        }
+        always {
+            cleanWs()
         }
     }
 }
