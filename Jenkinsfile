@@ -7,6 +7,7 @@ pipeline {
 
     environment {
         NODE_ENV = 'production'
+        PATH = "$PATH:/var/jenkins_home/tools/jenkins.plugins.nodejs.tools.NodeJSInstallation/Node20/bin"
     }
 
     stages {
@@ -20,11 +21,23 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
+                // Print versions for debugging
                 sh 'npm --version'
                 sh 'node --version'
+                
+                // Install global dependencies
+                sh 'npm install -g vite eslint typescript'
+                
+                // Client dependencies
                 dir('client') {
-                    sh 'npm ci'
+                    sh '''
+                        npm ci
+                        npm install --save-dev @vitejs/plugin-react vite
+                        npm install --save-dev eslint @typescript-eslint/parser @typescript-eslint/eslint-plugin
+                    '''
                 }
+                
+                // Server dependencies
                 dir('server') {
                     sh 'npm ci'
                 }
@@ -34,8 +47,9 @@ pipeline {
         stage('Lint & Build') {
             steps {
                 dir('client') {
-                    sh 'npm run lint || true'
-                    sh 'npm run build'
+                    // Use npx to ensure we're using local installations
+                    sh 'npx eslint . --ext .js,.jsx,.ts,.tsx || true'
+                    sh 'npx vite build'
                 }
                 dir('server') {
                     sh 'npm run lint || true'
@@ -57,6 +71,8 @@ pipeline {
         stage('Deploy') {
             steps {
                 echo 'Deploying application...'
+                // Add your deployment steps here
+                // Example: Deploy to a server or cloud platform
             }
         }
     }
@@ -64,9 +80,11 @@ pipeline {
     post {
         success {
             echo 'Pipeline succeeded!'
+            // Add any success notifications here
         }
         failure {
             echo 'Pipeline failed!'
+            // Add any failure notifications here
         }
         always {
             cleanWs()
