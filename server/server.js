@@ -6,14 +6,14 @@ require('dotenv').config();
 
 // Initialize Express app
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3002;
 
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
 
 // MongoDB Connection URI
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://Dev:Dev1234@cluster0.3vcjnag.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://devops:Basu%402003@cluster0.cwufnhl.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
 const DB_NAME = 'code-analyzer';  // Replace with your actual DB name
 
 let db;
