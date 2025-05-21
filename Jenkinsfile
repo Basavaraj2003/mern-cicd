@@ -1,14 +1,10 @@
 pipeline {
     agent any
-    
+
     tools {
         nodejs 'Node20'
     }
-    
-    environment {
-        NODE_ENV = 'production'
-    }
-    
+
     stages {
         stage('Checkout') {
             steps {
@@ -21,7 +17,7 @@ pipeline {
                 ])
             }
         }
-        
+
         stage('Verify Node Installation') {
             steps {
                 sh 'npm --version'
@@ -84,25 +80,34 @@ EOL
                     sh '''
                         echo "Cleaning up existing installations..."
                         rm -rf node_modules package-lock.json
-                        
-                        echo "Installing dependencies..."
-                        npm install --legacy-peer-deps
-                        
-                        echo "Verifying installations..."
+
+                        echo "Cleaning npm cache..."
+                        npm cache clean --force
+
+                        echo "Installing dependencies (including devDependencies)..."
+                        npm install --legacy-peer-deps --include=dev
+
+                        echo "Verifying Vite installation..."
                         ls -la node_modules/vite
-                        ls -la node_modules/eslint
+                        npm ls vite
                     '''
                 }
-                
+
                 dir('server') {
                     sh '''
+                        echo "Cleaning up existing installations..."
                         rm -rf node_modules package-lock.json
+
+                        echo "Cleaning npm cache..."
+                        npm cache clean --force
+
+                        echo "Installing dependencies..."
                         npm install --legacy-peer-deps
                     '''
                 }
             }
         }
-        
+
         stage('Create Vite Config') {
             steps {
                 dir('client') {
@@ -131,7 +136,7 @@ EOL
                 }
             }
         }
-        
+
         stage('Lint') {
             steps {
                 dir('client') {
@@ -140,7 +145,7 @@ EOL
                         npm run lint || true
                     '''
                 }
-                
+
                 dir('server') {
                     sh '''
                         if grep -q "lint" package.json; then 
@@ -152,7 +157,7 @@ EOL
                 }
             }
         }
-        
+
         stage('Build') {
             steps {
                 dir('client') {
@@ -160,18 +165,14 @@ EOL
                         echo "Current directory: $(pwd)"
                         echo "Directory contents:"
                         ls -la
-                        
+
                         echo "Building with Vite..."
-                        npm run build || {
-                            echo "Local build failed, trying with global vite..."
-                            npm install -g vite
-                            vite build
-                        }
+                        npm run build
                     '''
                 }
             }
         }
-        
+
         stage('Test') {
             steps {
                 dir('client') {
@@ -194,14 +195,14 @@ EOL
                 }
             }
         }
-        
+
         stage('Deploy') {
             steps {
                 echo 'Deploying application...'
             }
         }
     }
-    
+
     post {
         success {
             echo 'Pipeline succeeded!'
