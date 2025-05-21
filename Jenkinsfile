@@ -35,8 +35,9 @@ pipeline {
                     script {
                         sh '''
                             echo "Creating ESLint configuration..."
-                            cat > .eslintrc.js << 'EOL'
+                            cat > .eslintrc.cjs << 'EOL'
 module.exports = {
+    root: true,
     env: {
         browser: true,
         es2021: true,
@@ -70,7 +71,7 @@ module.exports = {
 }
 EOL
                             echo "ESLint configuration created"
-                            ls -la .eslintrc.js
+                            ls -la .eslintrc.cjs
                         '''
                     }
                 }
@@ -84,14 +85,8 @@ EOL
                         echo "Cleaning up existing installations..."
                         rm -rf node_modules package-lock.json
                         
-                        echo "Installing core dependencies..."
-                        npm install --legacy-peer-deps react react-dom
-                        
-                        echo "Installing ESLint and related packages..."
-                        npm install --save-dev --legacy-peer-deps eslint@8.56.0 eslint-plugin-react@7.33.2 @typescript-eslint/eslint-plugin@6.21.0 @typescript-eslint/parser@6.21.0 typescript@5.3.3
-                        
-                        echo "Installing Vite and related packages..."
-                        npm install --save-dev --legacy-peer-deps vite@5.1.3 @vitejs/plugin-react@4.2.1
+                        echo "Installing dependencies..."
+                        npm install --legacy-peer-deps
                         
                         echo "Verifying installations..."
                         ls -la node_modules/vite
@@ -122,6 +117,11 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     assetsDir: 'assets'
+  },
+  resolve: {
+    alias: {
+      '@': '/src'
+    }
   }
 })
 EOL
@@ -137,7 +137,7 @@ EOL
                 dir('client') {
                     sh '''
                         echo "Running ESLint..."
-                        npx eslint --ext .js,.jsx,.ts,.tsx src/ || true
+                        npm run lint || true
                     '''
                 }
                 
@@ -162,8 +162,8 @@ EOL
                         ls -la
                         
                         echo "Building with Vite..."
-                        npx vite build || {
-                            echo "Local vite build failed, trying with global vite..."
+                        npm run build || {
+                            echo "Local build failed, trying with global vite..."
                             npm install -g vite
                             vite build
                         }
