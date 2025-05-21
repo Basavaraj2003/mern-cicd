@@ -35,7 +35,6 @@ pipeline {
                     script {
                         sh '''
                             echo "Creating ESLint configuration..."
-                            mkdir -p .eslint
                             cat > .eslintrc.js << 'EOL'
 module.exports = {
     env: {
@@ -86,13 +85,13 @@ EOL
                         rm -rf node_modules package-lock.json
                         
                         echo "Installing core dependencies..."
-                        npm install react react-dom
+                        npm install --legacy-peer-deps react react-dom
                         
                         echo "Installing ESLint and related packages..."
-                        npm install --save-dev eslint@8.56.0 eslint-plugin-react@7.33.2 @typescript-eslint/eslint-plugin@7.0.1 @typescript-eslint/parser@7.0.1 typescript@5.3.3
+                        npm install --save-dev --legacy-peer-deps eslint@8.56.0 eslint-plugin-react@7.33.2 @typescript-eslint/eslint-plugin@6.21.0 @typescript-eslint/parser@6.21.0 typescript@5.3.3
                         
                         echo "Installing Vite and related packages..."
-                        npm install --save-dev vite@5.1.3 @vitejs/plugin-react@4.2.1
+                        npm install --save-dev --legacy-peer-deps vite@5.1.3 @vitejs/plugin-react@4.2.1
                         
                         echo "Verifying installations..."
                         ls -la node_modules/vite
@@ -103,20 +102,8 @@ EOL
                 dir('server') {
                     sh '''
                         rm -rf node_modules package-lock.json
-                        npm install
+                        npm install --legacy-peer-deps
                     '''
-                }
-            }
-        }
-        
-        stage('Lint') {
-            steps {
-                dir('client') {
-                    sh 'npx eslint --ext .js,.jsx,.ts,.tsx src/ || true'
-                }
-                
-                dir('server') {
-                    sh 'if grep -q "lint" package.json; then npm run lint || true; else echo "No lint script in package.json"; fi'
                 }
             }
         }
@@ -145,6 +132,27 @@ EOL
             }
         }
         
+        stage('Lint') {
+            steps {
+                dir('client') {
+                    sh '''
+                        echo "Running ESLint..."
+                        npx eslint --ext .js,.jsx,.ts,.tsx src/ || true
+                    '''
+                }
+                
+                dir('server') {
+                    sh '''
+                        if grep -q "lint" package.json; then 
+                            npm run lint || true
+                        else 
+                            echo "No lint script in package.json"
+                        fi
+                    '''
+                }
+            }
+        }
+        
         stage('Build') {
             steps {
                 dir('client') {
@@ -154,7 +162,11 @@ EOL
                         ls -la
                         
                         echo "Building with Vite..."
-                        npx vite build
+                        npx vite build || {
+                            echo "Local vite build failed, trying with global vite..."
+                            npm install -g vite
+                            vite build
+                        }
                     '''
                 }
             }
@@ -163,10 +175,22 @@ EOL
         stage('Test') {
             steps {
                 dir('client') {
-                    sh 'if grep -q "test" package.json; then npm test || true; else echo "No test script in package.json"; fi'
+                    sh '''
+                        if grep -q "test" package.json; then 
+                            npm test || true
+                        else 
+                            echo "No test script in package.json"
+                        fi
+                    '''
                 }
                 dir('server') {
-                    sh 'if grep -q "test" package.json; then npm test || true; else echo "No test script in package.json"; fi'
+                    sh '''
+                        if grep -q "test" package.json; then 
+                            npm test || true
+                        else 
+                            echo "No test script in package.json"
+                        fi
+                    '''
                 }
             }
         }
