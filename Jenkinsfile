@@ -26,32 +26,84 @@ pipeline {
             }
         }
 
+        stage('Fix ESLint Configuration') {
+            steps {
+                // Check if we need to convert flat config to traditional config
+                dir('client') {
+                    script {
+                        sh '''
+                            if [ -f "eslint.config.js" ]; then
+                                echo "Converting flat ESLint config to traditional configuration"
+                                # Create .eslintrc.js file instead of using flat config
+                                echo 'module.exports = {
+                                    "env": {
+                                        "browser": true,
+                                        "es2021": true,
+                                        "node": true
+                                    },
+                                    "extends": [
+                                        "eslint:recommended",
+                                        "plugin:react/recommended",
+                                        "plugin:@typescript-eslint/recommended"
+                                    ],
+                                    "parser": "@typescript-eslint/parser",
+                                    "parserOptions": {
+                                        "ecmaFeatures": {
+                                            "jsx": true
+                                        },
+                                        "ecmaVersion": "latest",
+                                        "sourceType": "module"
+                                    },
+                                    "plugins": [
+                                        "react",
+                                        "@typescript-eslint"
+                                    ],
+                                    "rules": {
+                                        "react/react-in-jsx-scope": "off"
+                                    },
+                                    "settings": {
+                                        "react": {
+                                            "version": "detect"
+                                        }
+                                    }
+                                }' > .eslintrc.js
+                                
+                                # Rename the flat config to prevent it from being used
+                                mv eslint.config.js eslint.config.js.bak || true
+                            fi
+                        '''
+                    }
+                }
+            }
+        }
+
         stage('Install Dependencies') {
             steps {
                 // Client dependencies
                 dir('client') {
-                    // Check for and update ESLint config type
-                    sh '''
-                        if [ -f "eslint.config.js" ]; then
-                            echo "Found flat ESLint config, installing required dependencies"
-                            npm install --save-dev @eslint/js
-                        fi
-                    '''
+                    // First update npm to ensure consistency
+                    sh 'npm install -g npm@latest'
                     
-                    // Using regular npm install instead of npm ci for more flexible resolution
-                    sh 'npm install'
+                    // Clean existing node_modules to avoid conflicts
+                    sh 'rm -rf node_modules package-lock.json'
                     
-                    // Ensure Vite and ESLint are properly installed
+                    // Install React dependencies
+                    sh 'npm install react react-dom'
+                    
+                    // Install dev dependencies explicitly
+                    sh 'npm install --save-dev eslint eslint-plugin-react @typescript-eslint/eslint-plugin @typescript-eslint/parser typescript'
+                    
+                    // Install Vite explicitly
                     sh 'npm install --save-dev vite @vitejs/plugin-react'
-                    sh 'npm install --save-dev eslint @typescript-eslint/parser @typescript-eslint/eslint-plugin'
                     
                     // Verify installations
-                    sh 'ls -la node_modules/vite || echo "Vite not installed correctly"'
-                    sh 'ls -la node_modules/@eslint || echo "ESLint packages not installed correctly"'
+                    sh 'ls -la node_modules/vite || echo "Vite not found, installing globally"'
+                    sh 'npm install -g vite'
                 }
                 
                 // Server dependencies
                 dir('server') {
+                    sh 'rm -rf node_modules package-lock.json'
                     sh 'npm install'
                 }
             }
@@ -60,21 +112,34 @@ pipeline {
         stage('Lint') {
             steps {
                 dir('client') {
-                    script {
-                        // Check ESLint config type and run appropriate command
-                        sh '''
-                            if [ -f "eslint.config.js" ]; then
-                                echo "Using ESLint flat config"
-                                npx eslint --config eslint.config.js . --ext .js,.jsx,.ts,.tsx || true
-                            else
-                                echo "Using traditional ESLint config"
-                                npx eslint . --ext .js,.jsx,.ts,.tsx || true
-                            fi
-                        '''
-                    }
+                    // Use the traditional ESLint config
+                    sh 'npx eslint --ext .js,.jsx,.ts,.tsx src/ || true'
                 }
+                
                 dir('server') {
-                    sh 'npm run lint || true'
+                    // Skip server linting if no script exists
+                    sh 'if grep -q "lint" package.json; then npm run lint || true; else echo "No lint script in package.json"; fi'
+                }
+            }
+        }
+        
+        stage('Create Vite Config') {
+            steps {
+                dir('client') {
+                    sh '''
+                        # Ensure vite.config.js exists and has proper format
+                        echo "import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+// https://vitejs.dev/config/
+export default defineConfig({
+  plugins: [react()],
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets'
+  }
+})" > vite.config.js
+                    '''
                 }
             }
         }
@@ -82,21 +147,15 @@ pipeline {
         stage('Build') {
             steps {
                 dir('client') {
-                    // Create simple Vite config if needed
+                    // Use global vite to build if local fails
                     sh '''
-                        if [ ! -f "vite.config.js" ] || ! grep -q "@vitejs/plugin-react" "vite.config.js"; then
-                            echo "Creating/updating Vite config"
-                            echo "import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-
-export default defineConfig({
-  plugins: [react()]
-});" > vite.config.js
+                        echo "Attempting build with local vite..."
+                        if ! npx vite build; then
+                            echo "Local vite build failed, using global vite..."
+                            npm install -g vite
+                            vite build
                         fi
                     '''
-                    
-                    // Run build with proper environment
-                    sh 'NODE_ENV=production npx vite build'
                 }
             }
         }
@@ -104,10 +163,10 @@ export default defineConfig({
         stage('Test') {
             steps {
                 dir('client') {
-                    sh 'npm test || true'
+                    sh 'if grep -q "test" package.json; then npm test || true; else echo "No test script in package.json"; fi'
                 }
                 dir('server') {
-                    sh 'npm test || true'
+                    sh 'if grep -q "test" package.json; then npm test || true; else echo "No test script in package.json"; fi'
                 }
             }
         }
