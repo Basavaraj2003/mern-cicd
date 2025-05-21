@@ -1,15 +1,15 @@
 pipeline {
     agent any
-
+    
     tools {
         nodejs 'Node20'
     }
-
+    
     environment {
         NODE_ENV = 'production'
         PATH = "$PATH:/var/jenkins_home/tools/jenkins.plugins.nodejs.tools.NodeJSInstallation/Node20/bin"
     }
-
+    
     stages {
         stage('Checkout') {
             steps {
@@ -18,45 +18,89 @@ pipeline {
                     credentialsId: '' // Leave empty if using public repo
             }
         }
+        
+        stage('Verify Node Installation') {
+            steps {
+                sh 'npm --version'
+                sh 'node --version'
+            }
+        }
 
         stage('Install Dependencies') {
             steps {
-                // Print versions for debugging
-                sh 'npm --version'
-                sh 'node --version'
-                
-                // Install global dependencies
-                sh 'npm install -g vite eslint typescript'
-                
                 // Client dependencies
                 dir('client') {
+                    // Check for and update ESLint config type
                     sh '''
-                        npm ci
-                        npm install --save-dev @vitejs/plugin-react vite
-                        npm install --save-dev eslint @typescript-eslint/parser @typescript-eslint/eslint-plugin
+                        if [ -f "eslint.config.js" ]; then
+                            echo "Found flat ESLint config, installing required dependencies"
+                            npm install --save-dev @eslint/js
+                        fi
                     '''
+                    
+                    // Using regular npm install instead of npm ci for more flexible resolution
+                    sh 'npm install'
+                    
+                    // Ensure Vite and ESLint are properly installed
+                    sh 'npm install --save-dev vite @vitejs/plugin-react'
+                    sh 'npm install --save-dev eslint @typescript-eslint/parser @typescript-eslint/eslint-plugin'
+                    
+                    // Verify installations
+                    sh 'ls -la node_modules/vite || echo "Vite not installed correctly"'
+                    sh 'ls -la node_modules/@eslint || echo "ESLint packages not installed correctly"'
                 }
                 
                 // Server dependencies
                 dir('server') {
-                    sh 'npm ci'
+                    sh 'npm install'
                 }
             }
         }
-
-        stage('Lint & Build') {
+        
+        stage('Lint') {
             steps {
                 dir('client') {
-                    // Use npx to ensure we're using local installations
-                    sh 'npx eslint . --ext .js,.jsx,.ts,.tsx || true'
-                    sh 'npx vite build'
+                    script {
+                        // Check ESLint config type and run appropriate command
+                        sh '''
+                            if [ -f "eslint.config.js" ]; then
+                                echo "Using ESLint flat config"
+                                npx eslint --config eslint.config.js . --ext .js,.jsx,.ts,.tsx || true
+                            else
+                                echo "Using traditional ESLint config"
+                                npx eslint . --ext .js,.jsx,.ts,.tsx || true
+                            fi
+                        '''
+                    }
                 }
                 dir('server') {
                     sh 'npm run lint || true'
                 }
             }
         }
+        
+        stage('Build') {
+            steps {
+                dir('client') {
+                    // Create simple Vite config if needed
+                    sh '''
+                        if [ ! -f "vite.config.js" ] || ! grep -q "@vitejs/plugin-react" "vite.config.js"; then
+                            echo "Creating/updating Vite config"
+                            echo "import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 
+export default defineConfig({
+  plugins: [react()]
+});" > vite.config.js
+                        fi
+                    '''
+                    
+                    // Run build with proper environment
+                    sh 'NODE_ENV=production npx vite build'
+                }
+            }
+        }
+        
         stage('Test') {
             steps {
                 dir('client') {
@@ -67,7 +111,7 @@ pipeline {
                 }
             }
         }
-
+        
         stage('Deploy') {
             steps {
                 echo 'Deploying application...'
@@ -76,7 +120,7 @@ pipeline {
             }
         }
     }
-
+    
     post {
         success {
             echo 'Pipeline succeeded!'
