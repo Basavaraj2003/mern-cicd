@@ -34,44 +34,37 @@ pipeline {
                 dir('client') {
                     script {
                         sh '''
-                            if [ -f "eslint.config.js" ]; then
-                                echo "Converting flat ESLint config to traditional configuration"
-                                cat > .eslintrc.js << 'EOL'
-module.exports = {
-    "env": {
-        "browser": true,
-        "es2021": true,
-        "node": true
-    },
-    "extends": [
-        "eslint:recommended",
-        "plugin:react/recommended",
-        "plugin:@typescript-eslint/recommended"
-    ],
-    "parser": "@typescript-eslint/parser",
-    "parserOptions": {
-        "ecmaFeatures": {
-            "jsx": true
+                            # Create ESLint config file
+                            echo "Creating ESLint configuration..."
+                            cat > eslint.config.js << 'EOL'
+export default [
+    {
+        files: ["**/*.{js,jsx,ts,tsx}"],
+        languageOptions: {
+            ecmaVersion: "latest",
+            sourceType: "module",
+            parser: "@typescript-eslint/parser",
+            parserOptions: {
+                ecmaFeatures: {
+                    jsx: true
+                }
+            }
         },
-        "ecmaVersion": "latest",
-        "sourceType": "module"
-    },
-    "plugins": [
-        "react",
-        "@typescript-eslint"
-    ],
-    "rules": {
-        "react/react-in-jsx-scope": "off"
-    },
-    "settings": {
-        "react": {
-            "version": "detect"
+        plugins: {
+            react: react,
+            "@typescript-eslint": typescript
+        },
+        rules: {
+            "react/react-in-jsx-scope": "off"
+        },
+        settings: {
+            react: {
+                version: "detect"
+            }
         }
     }
-}
+];
 EOL
-                                mv eslint.config.js eslint.config.js.bak || true
-                            fi
                         '''
                     }
                 }
@@ -83,10 +76,18 @@ EOL
                 dir('client') {
                     sh '''
                         rm -rf node_modules package-lock.json
-                        # Install dependencies without updating npm
+                        # Install core dependencies
                         npm install react react-dom
-                        npm install --save-dev eslint eslint-plugin-react @typescript-eslint/eslint-plugin @typescript-eslint/parser typescript
-                        npm install --save-dev vite@latest @vitejs/plugin-react
+                        
+                        # Install ESLint and related packages
+                        npm install --save-dev eslint@latest eslint-plugin-react@latest @typescript-eslint/eslint-plugin@latest @typescript-eslint/parser@latest typescript@latest
+                        
+                        # Install Vite and related packages
+                        npm install --save-dev vite@latest @vitejs/plugin-react@latest
+                        
+                        # Verify installations
+                        ls -la node_modules/vite
+                        ls -la node_modules/eslint
                     '''
                 }
                 
@@ -115,6 +116,7 @@ EOL
             steps {
                 dir('client') {
                     sh '''
+                        echo "Creating Vite configuration..."
                         cat > vite.config.js << 'EOL'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
@@ -127,6 +129,8 @@ export default defineConfig({
   }
 })
 EOL
+                        # Verify the file was created
+                        ls -la vite.config.js
                     '''
                 }
             }
@@ -136,8 +140,13 @@ EOL
             steps {
                 dir('client') {
                     sh '''
+                        # Ensure we're in the right directory
+                        pwd
+                        ls -la
+                        
+                        # Try local build first
                         if ! npx vite build; then
-                            echo "Local vite build failed, using global vite..."
+                            echo "Local vite build failed, trying with global vite..."
                             npm install -g vite
                             vite build
                         fi
