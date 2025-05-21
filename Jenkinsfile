@@ -2,7 +2,7 @@ pipeline {
     agent any
     
     tools {
-        nodejs 'Node20'
+        nodejs 'nodejs-20.17.0'
     }
     
     environment {
@@ -81,9 +81,6 @@ pipeline {
             steps {
                 // Client dependencies
                 dir('client') {
-                    // First update npm to ensure consistency
-                    sh 'npm install -g npm@latest'
-                    
                     // Clean existing node_modules to avoid conflicts
                     sh 'rm -rf node_modules package-lock.json'
                     
