@@ -4,6 +4,7 @@ services:
   backend:
     build:
       context: ./server
+      dockerfile: Dockerfile
     ports:
       - "3002:3002"
     env_file:
@@ -11,25 +12,48 @@ services:
     volumes:
       - ./server:/app
     depends_on:
-      - mongo
+      mongo:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   frontend:
     build:
       context: ./client
+      dockerfile: Dockerfile
     ports:
       - "3000:80"
     volumes:
       - ./client:/app
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   mongo:
-    image: mongo
+    image: mongo:latest
     ports:
       - "27017:27017"
     volumes:
       - mongo-data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
 
   jenkins:
-    image: trion/jenkins-docker-client
+    image: trion/jenkins-docker-client:latest
     privileged: true
     user: root
     ports:
@@ -42,6 +66,12 @@ services:
         target: /var/run/docker.sock
     environment:
       - DOCKER_HOST=unix:///var/run/docker.sock
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/login"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 volumes:
   mongo-data:
