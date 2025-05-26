@@ -1,9 +1,11 @@
+name: mern-jenkins
+
 services:
   backend:
     build:
       context: ./server
     ports:
-      - "3001:3001"
+      - "3002:3002"
     env_file:
       - ./server/.env
     volumes:
@@ -26,5 +28,21 @@ services:
     volumes:
       - mongo-data:/data/db
 
+  jenkins:
+    image: trion/jenkins-docker-client
+    privileged: true
+    user: root
+    ports:
+      - "8082:8080"
+      - "50001:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - type: bind
+        source: //var/run/docker.sock
+        target: /var/run/docker.sock
+    environment:
+      - DOCKER_HOST=unix:///var/run/docker.sock
+
 volumes:
   mongo-data:
+  jenkins_home:

@@ -14,7 +14,7 @@ app.use(bodyParser.json());
 
 // MongoDB Connection URI
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://devops:Basu%402003@cluster0.cwufnhl.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
-const DB_NAME = 'code-analyzer';  // Replace with your actual DB name
+const DB_NAME = 'devops';  // Replace with your actual DB name
 
 let db;
 
@@ -78,7 +78,7 @@ app.post('/api/analyses', async (req, res) => {
 });
 
 // Start the server
-app.listen(PORT, async () => {
+app.listen(PORT, '0.0.0.0', async () => {
   await connectToDatabase();
   console.log(`🚀 Server running on port ${PORT}`);
 });

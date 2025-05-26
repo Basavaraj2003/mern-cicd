@@ -5,6 +5,12 @@ pipeline {
         nodejs 'Node20'
     }
 
+    environment {
+        DOCKER_IMAGE_CLIENT = 'mern-client'
+        DOCKER_IMAGE_SERVER = 'mern-server'
+        DOCKER_TAG = "${BUILD_NUMBER}"
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -196,9 +202,41 @@ EOL
             }
         }
 
+        stage('Build Docker Images') {
+            steps {
+                dir('client') {
+                    sh '''
+                        echo "Building client Docker image..."
+                        docker build -t ${DOCKER_IMAGE_CLIENT}:${DOCKER_TAG} .
+                        docker tag ${DOCKER_IMAGE_CLIENT}:${DOCKER_TAG} ${DOCKER_IMAGE_CLIENT}:latest
+                    '''
+                }
+                
+                dir('server') {
+                    sh '''
+                        echo "Building server Docker image..."
+                        docker build -t ${DOCKER_IMAGE_SERVER}:${DOCKER_TAG} .
+                        docker tag ${DOCKER_IMAGE_SERVER}:${DOCKER_TAG} ${DOCKER_IMAGE_SERVER}:latest
+                    '''
+                }
+            }
+        }
+
         stage('Deploy') {
             steps {
-                echo 'Deploying application...'
+                sh '''
+                    echo "Stopping existing containers..."
+                    docker-compose down || true
+                    
+                    echo "Starting new containers..."
+                    docker-compose up -d
+                    
+                    echo "Checking container status..."
+                    docker-compose ps
+                    
+                    echo "Checking container logs..."
+                    docker-compose logs --tail=50
+                '''
             }
         }
     }
@@ -206,9 +244,18 @@ EOL
     post {
         success {
             echo 'Pipeline succeeded!'
+            sh '''
+                echo "Deployment completed successfully!"
+                echo "Frontend is available at: http://localhost:80"
+                echo "Backend is available at: http://localhost:5000"
+            '''
         }
         failure {
             echo 'Pipeline failed!'
+            sh '''
+                echo "Deployment failed! Rolling back..."
+                docker-compose down
+            '''
         }
         always {
             cleanWs()
