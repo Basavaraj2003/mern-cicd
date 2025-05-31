@@ -6,7 +6,7 @@ services:
       context: ./server
       dockerfile: Dockerfile
     ports:
-      - "3002:3001"
+      - "3002:3002"
     env_file:
       - ./server/.env
     volumes:
@@ -15,11 +15,11 @@ services:
       mongo:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      test: ["CMD", "curl", "-f", "http://localhost:3002/api/health"]
+      interval: 60s
+      timeout: 20s
+      retries: 5
+      start_period: 80s
 
   frontend:
     build:
@@ -57,7 +57,7 @@ services:
     privileged: true
     user: root
     ports:
-      - "8082:8080"
+      - "8090:8080"
       - "50001:50000"
     volumes:
       - jenkins_home:/var/jenkins_home
@@ -66,6 +66,10 @@ services:
         target: /var/run/docker.sock
     environment:
       - DOCKER_HOST=unix:///var/run/docker.sock
+      - JENKINS_OPTS="--prefix=/jenkins"
+    command: >
+      bash -c "chown -R jenkins:jenkins /var/jenkins_home && 
+      /usr/local/bin/jenkins.sh"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/login"]
       interval: 30s

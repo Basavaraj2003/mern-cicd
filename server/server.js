@@ -77,6 +77,15 @@ app.post('/api/analyses', async (req, res) => {
   }
 });
 
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  if (db) {
+    res.status(200).json({ status: 'healthy', database: 'connected' });
+  } else {
+    res.status(503).json({ status: 'unhealthy', database: 'disconnected' });
+  }
+});
+
 // Start the server
 app.listen(PORT, '0.0.0.0', async () => {
   await connectToDatabase();
