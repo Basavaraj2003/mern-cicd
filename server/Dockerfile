@@ -1,5 +1,5 @@
 # server/Dockerfile
-FROM node:18
+FROM node:22
 
 WORKDIR /app
 
