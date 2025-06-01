@@ -147,18 +147,17 @@ EOL
             steps {
                 dir('client') {
                     sh '''
-                        echo "Running ESLint..."
-                        npm run lint || true
+                        echo "Running ESLint for client..."
+                        # Ensure a 'lint' script exists in client/package.json
+                        npm run lint
                     '''
                 }
 
                 dir('server') {
                     sh '''
-                        if grep -q "lint" package.json; then 
-                            npm run lint || true
-                        else 
-                            echo "No lint script in package.json"
-                        fi
+                        echo "Running lint for server..."
+                        # Ensure a 'lint' script exists in server/package.json
+                        npm run lint
                     '''
                 }
             }
@@ -184,44 +183,26 @@ EOL
                 dir('client') {
                     sh '''
                         echo "Starting Client Testing..."
-                        if grep -q "test" package.json; then
-                            # Add specific commands for different test types here
-                            echo "Running Client Unit Tests..."
-                            # npm run test:unit || true
+                        # Ensure a 'test' script exists in client/package.json
+                        # Add specific commands for different test types here if needed
+                        # npm run test:unit
+                        # npm run test:integration
+                        # npm run test:e2e
 
-                            echo "Running Client Integration Tests..."
-                            # npm run test:integration || true
-
-                            echo "Running Client Component/E2E Tests..."
-                            # npm run test:e2e || true
-
-                            # Fallback to generic test script if specific ones not defined or for simplicity
-                            echo "Running Client Generic Tests (npm test)..."
-                            npm test || true
-
-                        else
-                            echo "No test script in client/package.json"
-                        fi
-                        echo "Client Testing Finished."
+                        # Running the default test script
+                        npm test
                     '''
                 }
                 dir('server') {
                     sh '''
                         echo "Starting Server Testing..."
-                        if grep -q "test" package.json; then
-                             # Add specific commands for different test types here
-                            echo "Running Server Unit Tests..."
-                            # npm run test:unit || true
+                        # Ensure a 'test' script exists in server/package.json
+                        # Add specific commands for different test types here if needed
+                        # npm run test:unit
+                        # npm run test:integration
 
-                            echo "Running Server Integration Tests..."
-                            # npm run test:integration || true
-
-                            echo "Running Server Generic Tests (npm test)..."
-                            npm test || true
-                        else
-                            echo "No test script in server/package.json"
-                        fi
-                        echo "Server Testing Finished."
+                        # Running the default test script
+                        npm test
                     '''
                 }
             }
@@ -251,12 +232,11 @@ EOL
             steps {
                 script {
                     echo "Pushing Docker images to registry..."
-                    // Replace with your actual Docker push commands
-                    // Example:
-                    // sh "docker push ${DOCKER_IMAGE_CLIENT}:${DOCKER_TAG}"
-                    // sh "docker push ${DOCKER_IMAGE_CLIENT}:latest"
-                    // sh "docker push ${DOCKER_IMAGE_SERVER}:${DOCKER_TAG}"
-                    // sh "docker push ${DOCKER_IMAGE_SERVER}:latest"
+                    // Add Jenkins credentials for your Docker registry
+                    sh "docker push ${DOCKER_IMAGE_CLIENT}:${DOCKER_TAG}"
+                    sh "docker push ${DOCKER_IMAGE_CLIENT}:latest"
+                    sh "docker push ${DOCKER_IMAGE_SERVER}:${DOCKER_TAG}"
+                    sh "docker push ${DOCKER_IMAGE_SERVER}:latest"
                     echo "Docker images pushed."
                 }
             }
@@ -289,10 +269,9 @@ EOL
         stage('Monitor') {
             steps {
                 script {
-                    echo "Setting up monitoring and alerts..."
-                    // Add commands here to integrate with monitoring tools, configure alerts, etc.
-                    // This stage represents the ongoing monitoring of the deployed application.
-                    echo "Monitoring setup placeholder complete."
+                    // Add commands here to integrate with monitoring tools, collect metrics, send alerts, etc.
+                    // Example: sh 'run-monitoring-script.sh'
+                    echo "Monitoring integration placeholder."
                 }
             }
         }
@@ -311,7 +290,9 @@ EOL
             echo 'Pipeline failed!'
             sh '''
                 echo "Deployment failed! Rolling back..."
-                docker-compose down
+                dir('.') {
+                    docker-compose down
+                }
             '''
         }
         always {
