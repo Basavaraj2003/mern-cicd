@@ -271,11 +271,11 @@ EOL
                     echo "Starting new containers..."
                     docker-compose up -d
 
-                    // Add a delay or a health check here to ensure services are running before proceeding
-                    // For example:
-                    // sleep 60 // Wait for 60 seconds
-                    // sh 'curl http://localhost:3000/health || exit 1' // Example health check for client
-                    // sh 'curl http://localhost:3002/health || exit 1' // Example health check for server
+                    # Add a delay or a health check here to ensure services are running before proceeding
+                    # For example:
+                    # sleep 60 # Wait for 60 seconds
+                    # sh 'curl http://localhost:3000/health || exit 1' # Example health check for client
+                    # sh 'curl http://localhost:3002/health || exit 1' # Example health check for server
 
                     echo "Checking container status..."
                     docker-compose ps
