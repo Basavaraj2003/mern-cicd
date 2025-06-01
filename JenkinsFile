@@ -269,9 +269,10 @@ EOL
         stage('Monitor') {
             steps {
                 script {
-                    // Add commands here to integrate with monitoring tools, collect metrics, send alerts, etc.
-                    // Example: sh 'run-monitoring-script.sh'
-                    echo "Monitoring integration placeholder."
+                    echo "Setting up monitoring and alerts..."
+                    // Add commands here to integrate with monitoring tools, configure alerts, etc.
+                    // This stage represents the ongoing monitoring of the deployed application.
+                    echo "Monitoring setup placeholder complete."
                 }
             }
         }
@@ -290,9 +291,7 @@ EOL
             echo 'Pipeline failed!'
             sh '''
                 echo "Deployment failed! Rolling back..."
-                dir('.') {
-                    docker-compose down
-                }
+                docker-compose down
             '''
         }
         always {
