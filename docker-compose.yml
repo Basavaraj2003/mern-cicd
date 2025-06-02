@@ -9,8 +9,10 @@ services:
       - "3002:3002"
     env_file:
       - ./server/.env
+    # volumes:
+    #   - ./server:/app
     volumes:
-      - ./server:/app
+      - /app/node_modules # <--- Keep this line for development
     depends_on:
       mongo:
         condition: service_healthy
@@ -20,6 +22,10 @@ services:
       timeout: 20s
       retries: 5
       start_period: 80s
+    labels:
+      - "prometheus.io/scrape=true"
+      - "prometheus.io/port=3002"
+      - "prometheus.io/path=/metrics"
 
   frontend:
     build:
@@ -52,31 +58,41 @@ services:
       retries: 5
       start_period: 40s
 
-  jenkins:
-    image: trion/jenkins-docker-client:latest
-    privileged: true
-    user: root
+  prometheus:
+    image: prom/prometheus:latest
     ports:
-      - "8090:8080"
-      - "50001:50000"
+      - "9090:9090"
     volumes:
-      - jenkins_home:/var/jenkins_home
-      - type: bind
-        source: //var/run/docker.sock
-        target: /var/run/docker.sock
-    environment:
-      - DOCKER_HOST=unix:///var/run/docker.sock
-      - JENKINS_OPTS="--prefix=/jenkins"
-    command: >
-      bash -c "chown -R jenkins:jenkins /var/jenkins_home && 
-      /usr/local/bin/jenkins.sh"
+      - ./prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/login"]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    depends_on:
+      - prometheus
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   mongo-data:
-  jenkins_home:
+  prometheus_data:
+  grafana_data:
