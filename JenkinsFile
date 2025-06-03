@@ -151,7 +151,7 @@ EOL
                     sh '''
                         echo "Running ESLint for client..."
                         # Ensure a 'lint' script exists in client/package.json
-                        npm run lint
+                        npm run lint -- --fix
                     '''
                 }
 
@@ -159,7 +159,7 @@ EOL
                     sh '''
                         echo "Running lint for server..."
                         # Ensure a 'lint' script exists in server/package.json
-                        npm run lint
+                        npm run lint -- --fix
                     '''
                 }
             }
@@ -303,16 +303,20 @@ EOL
         failure {
             echo 'Pipeline failed!'
             script {
-                dir('.') { // Ensure we are in the workspace root
+                node {
                     sh '''
                         echo "Deployment failed! Rolling back..."
-                        docker-compose down
+                        docker-compose -f docker-compose.yml down
                     '''
                 }
             }
         }
         always {
-            cleanWs()
+            script {
+                node {
+                    cleanWs()
+                }
+            }
         }
     }
 }
