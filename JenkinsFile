@@ -150,7 +150,7 @@ EOL
                 dir('client') {
                     sh '''
                         echo "Running ESLint for client..."
-                        # Ensure a 'lint' script exists in client/package.json
+                        // Ensure a 'lint' script exists in client/package.json
                         npm run lint
                     '''
                 }
@@ -158,7 +158,7 @@ EOL
                 dir('server') {
                     sh '''
                         echo "Running lint for server..."
-                        # Ensure a 'lint' script exists in server/package.json
+                        // Ensure a 'lint' script exists in server/package.json
                         npm run lint
                     '''
                 }
@@ -183,29 +183,14 @@ EOL
         stage('Test') {
             steps {
                 dir('client') {
-                    sh '''
-                        echo "Starting Client Testing..."
-                        # Ensure a 'test' script exists in client/package.json
-                        # Add specific commands for different test types here if needed
-                        # npm run test:unit
-                        # npm run test:integration
-                        # npm run test:e2e
-
-                        # Running the default test script
-                        npm test
-                    '''
+                    echo "Starting Client Tests (Unit/Component)..."
+                    sh 'npm test' // Runs Vitest as configured in package.json
                 }
                 dir('server') {
-                    sh '''
-                        echo "Starting Server Testing..."
-                        # Ensure a 'test' script exists in server/package.json
-                        # Add specific commands for different test types here if needed
-                        # npm run test:unit
-                        # npm run test:integration
-
-                        # Running the default test script
-                        npm test
-                    '''
+                    echo "Starting Server Unit Tests..."
+                    sh 'npm run test:unit' // Runs Jest for unit tests
+                    echo "Starting Server Integration Tests..."
+                    sh 'npm run test:integration' // Runs Jest for integration tests
                 }
             }
         }
@@ -219,7 +204,7 @@ EOL
                         docker tag ${DOCKER_IMAGE_CLIENT}:${DOCKER_TAG} ${DOCKER_IMAGE_CLIENT}:latest
                     '''
                 }
-                
+
                 dir('server') {
                     sh '''
                         echo "Building server Docker image..."
@@ -249,19 +234,22 @@ EOL
                 sh '''
                     echo "Stopping existing containers..."
                     docker-compose down || true
-                    
+
                     echo "Starting new containers..."
                     docker-compose up -d
 
-                    # Add a delay or a health check here to ensure services are running before proceeding
-                    # For example:
-                    # sleep 60 # Wait for 60 seconds
-                    # sh 'curl http://localhost:3000/health || exit 1' # Example health check for client
-                    # sh 'curl http://localhost:3002/health || exit 1' # Example health check for server
+                    // Add health checks here to ensure services are running before proceeding
+                    echo "Waiting for client service to be healthy..."
+                    sh 'curl --fail --silent --show-error http://localhost:3000 || exit 1' // Example health check for client
+                    echo "Client service is healthy."
+
+                    echo "Waiting for server service to be healthy..."
+                    sh 'curl --fail --silent --show-error http://localhost:3002/api/health || exit 1' // Example health check for server
+                    echo "Server service is healthy."
 
                     echo "Checking container status..."
                     docker-compose ps
-                    
+
                     echo "Checking container logs..."
                     docker-compose logs --tail=50
                 '''
@@ -271,10 +259,8 @@ EOL
         stage('Monitor') {
             steps {
                 script {
-                    echo "Setting up monitoring and alerts..."
-                    // Add commands here to integrate with monitoring tools, configure alerts, etc.
-                    // This stage represents the ongoing monitoring of the deployed application.
-                    echo "Monitoring setup placeholder complete."
+                    echo "Monitoring stage: Placeholder for integrating with external monitoring systems or adding monitoring-specific checks."
+                    // Add commands here to configure monitoring dashboards, set up alerts, etc.
                 }
             }
         }
@@ -288,7 +274,7 @@ EOL
                             sonar-scanner \
                                 -Dsonar.projectKey=mern-jenkins \
                                 -Dsonar.sources=. \
-                                -Dsonar.exclusions=node_modules/**,**/node_modules/**,**/dist/**,**/build/**,**/.git/**,**/.github/** \
+                                -Dsonar.exclusions=node_modules/,/node_modules/,/dist/,/build/,/.git/,/.github/** \
                                 -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
                         '''
                     }
